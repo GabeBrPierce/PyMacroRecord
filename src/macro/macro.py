@@ -189,6 +189,14 @@ class Macro:
             "rightClickEvent": Button.right,
             "middleClickEvent": Button.middle,
         }
+        # Thumb / side buttons: x1,x2 on Windows; button8,button9 on Linux.
+        for _ev, _names in (("x1ClickEvent", ("x1", "button8")),
+                            ("x2ClickEvent", ("x2", "button9"))):
+            for _n in _names:
+                _b = getattr(Button, _n, None)
+                if _b is not None:
+                    click_func[_ev] = _b
+                    break
         keyToUnpress = []
 
         is_infinite = userSettings["Playback"]["Repeat"].get("Infinite", False)
@@ -298,6 +306,14 @@ class Macro:
             self.keyboardControl.release(key)
         self.mouseControl.release(Button.left)
         self.mouseControl.release(Button.middle)
+        self.mouseControl.release(Button.right)
+        for _n in ("x1", "x2", "button8", "button9"):
+            _b = getattr(Button, _n, None)
+            if _b is not None:
+                try:
+                    self.mouseControl.release(_b)
+                except Exception:
+                    pass
 
     def stop_playback(self, playback_stopped_manually=False):
         self.playback = False
@@ -413,6 +429,14 @@ class Macro:
             button_event = "rightClickEvent"
         elif button == Button.middle:
             button_event = "middleClickEvent"
+        else:
+            # Thumb / side buttons. pynput names them x1/x2 on Windows and
+            # button8/button9 on Linux; map both to the same recorded events.
+            _name = getattr(button, "name", "")
+            if _name in ("x1", "button8"):
+                button_event = "x1ClickEvent"
+            elif _name in ("x2", "button9"):
+                button_event = "x2ClickEvent"
         self.__record_event(
             {
                 "type": button_event,
