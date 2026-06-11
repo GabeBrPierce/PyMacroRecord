@@ -1,3 +1,4 @@
+import copy
 from datetime import datetime
 from os import getlogin, system
 from sys import platform
@@ -347,6 +348,41 @@ class Macro:
                     system("pmset sleepnow")
             force_close = True
             self.main_app.quit_software(force_close)
+
+    def play_library_recording(self, rec, on_done=None):
+        """Play a recording stored in the Macro Library, outright, using the
+        current global playback settings. No-op if already busy."""
+        if self.playback or self.record:
+            return
+        events = rec.get("events") if isinstance(rec, dict) else None
+        if not events:
+            return
+        self.macro_events = copy.deepcopy(events)
+        self.main_app.macro_recorded = True
+        self._library_play_done = on_done
+        self.start_playback()
+
+    def reset_record_ui(self):
+        """Force the record/play buttons and File menu back to an idle state.
+        Used by the panic meta-bind."""
+        try:
+            self.main_app.recordBtn.configure(
+                image=self.main_app.recordImg, state=NORMAL, command=self.start_record
+            )
+            self.main_app.playBtn.configure(
+                image=self.main_app.playImg,
+                state=NORMAL if self.main_app.macro_recorded else DISABLED,
+                command=self.start_playback,
+            )
+            fm = self.main_menu.file_menu
+            tc = self.main_app.text_content["file_menu"]
+            for key in ("save_text", "save_as_text", "new_text", "load_text"):
+                try:
+                    fm.entryconfig(tc[key], state=NORMAL)
+                except Exception:
+                    pass
+        except Exception:
+            pass
 
     def import_record(self, record):
         self.macro_events = record

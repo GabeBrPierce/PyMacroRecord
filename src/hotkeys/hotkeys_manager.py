@@ -143,6 +143,42 @@ class HotkeysManager:
                 self._triggered_hotkeys.add("Playback_Stop")
                 self.macro.stop_playback(True)
 
+            self.__check_dynamic_bindings()
+
+    def __check_dynamic_bindings(self):
+        """Trigger meta-binds (always active) and active-profile + Global
+        recording hotkeys. Meta-binds are checked even during playback so that
+        panic / stop-all remain usable; recording hotkeys only start playback
+        when idle."""
+        library = getattr(self.main_app, "library", None)
+        if library is None:
+            return
+        detected = self.hotkey_detection
+
+        # Meta-binds -- always available.
+        meta_exec = getattr(self.main_app, "meta_executor", None)
+        if meta_exec is not None:
+            for bid, mb in library.list_meta_binds().items():
+                token = "meta:" + bid
+                if token in self._triggered_hotkeys:
+                    continue
+                if self.__is_hotkey_triggered(mb.get("hotkey"), detected):
+                    self._triggered_hotkeys.add(token)
+                    meta_exec.run(mb.get("action"), mb.get("arg"))
+
+        # Recording hotkeys -- only when idle (start playback of that macro).
+        if self.macro.record or self.macro.playback:
+            return
+        for binding in library.active_hotkey_bindings():
+            token = "rec:" + binding["id"]
+            if token in self._triggered_hotkeys:
+                continue
+            if self.__is_hotkey_triggered(binding.get("hotkey"), detected):
+                self._triggered_hotkeys.add(token)
+                rec = {"events": binding["events"], "settings": binding.get("settings")}
+                self.macro.play_library_recording(rec)
+                break
+
     def __on_release(self, key):
         key_released = getKeyPressed(self.keyboard_listener, key)
         if key_released is not None:

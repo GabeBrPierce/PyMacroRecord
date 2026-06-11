@@ -123,3 +123,49 @@ If you encounter any issue or you want to request an update. Please open an [iss
 
 
 
+
+
+# Macro Library: profiles, hotkeys, auto-switching and meta-binds
+
+Open the **Library** menu -> **Open Macro Library**.
+
+## Saving and playing recordings
+1. Record a macro as usual (red button), then stop it.
+2. In the Library window, select the profile you want (or leave **Global**) and
+   click **Save current recording**, then give it a name.
+3. Select any recording and click **Play** (or double-click it) to run it
+   immediately.
+
+## Profiles
+- **New profile** creates a named group (e.g. `Photoshop`).
+- **Set active** makes the selected profile the current one.
+- Recordings in the **Global** profile are always available, in addition to the
+  active profile's recordings.
+- **Move to...** moves a recording between profiles; **Rename** / **Delete**
+  manage them.
+
+## Automatic switching by window
+1. Select a non-Global profile and click **Window rules...**.
+2. Type one substring per line that should match the window (e.g. `photoshop`,
+   or a process like `photoshop.exe`). The **Capture current window** button
+   fills in whatever window is focused.
+3. Back in the main library window, tick **Auto-switch profile by window**
+   (also available directly in the Library menu).
+
+Now, whenever you focus a matching window, that profile becomes active; when no
+profile matches, it falls back to **Global**.
+
+On Linux this needs `xdotool` (preferred) or `wmctrl` installed.
+
+## Per-recording hotkeys
+Select a recording, click **Set hotkey**, press your combination, and click OK.
+The hotkey plays that recording whenever its profile (or Global) is active.
+
+## Meta-binds
+Click **Meta-binds...** (Library window or Library menu). **Add** a bind, choose
+an action, an optional target (a profile or a recording), and a hotkey. Useful
+examples:
+- `Cycle active profile` on one key.
+- `Panic (stop + release)` to instantly halt everything.
+- `Switch to profile` -> a specific profile.
+- `Lock the computer` / `Sleep the computer`.

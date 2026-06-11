@@ -4,6 +4,7 @@ from webbrowser import open as OpenUrl
 
 from utils.record_file_management import RecordFileManagement
 from windows.help.about import About
+from windows.library import LibraryWindow, MetaBindsWindow
 from windows.options.playback import Delay, Repeat, Speed, TimeGui
 from windows.options.settings import AfterPlayBack, Hotkeys, SelectLanguage
 from windows.others.donors import Donors
@@ -99,6 +100,23 @@ class MenuBar(Menu):
         self.Check_update = BooleanVar(value=userSettings["Others"]["Check_update"])
         self.others_sub.add_checkbutton(label=self.text_config["options_menu"]["others_menu"]["check_update_text"], variable=self.Check_update, command=lambda: settings.change_settings("Others", "Check_update"))
         self.others_sub.add_command(label=self.text_config["options_menu"]["others_menu"]["reset_settings_text"], command=settings.reset_settings)
+
+        # Library Section (profiles, recordings, meta-binds)
+        lib_text = self.text_config.get("library_menu", {})
+        self.library_menu = Menu(my_menu, tearoff=0)
+        my_menu.add_cascade(label=lib_text.get("library_text", "Library"), menu=self.library_menu)
+        self.library_menu.add_command(
+            label=lib_text.get("open_text", "Open Macro Library"),
+            command=lambda: LibraryWindow(parent, parent))
+        self.library_menu.add_command(
+            label=lib_text.get("meta_binds_text", "Meta-Binds"),
+            command=lambda: MetaBindsWindow(parent, parent))
+        self.library_menu.add_separator()
+        self.auto_switch_var = BooleanVar(value=parent.library.get_auto_switch())
+        self.library_menu.add_checkbutton(
+            label=lib_text.get("auto_switch_text", "Auto-switch profile by window"),
+            variable=self.auto_switch_var,
+            command=lambda: parent.library.set_auto_switch(self.auto_switch_var.get()))
 
         # Help section
         self.help_section = Menu(my_menu, tearoff=0)

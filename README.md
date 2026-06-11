@@ -29,6 +29,41 @@ PyMacroRecord works with a GUI made using tkinter, making it easier for users to
 - Custom Hotkey for starting a record and stop it, start playback and stop it
 - Mouse Movement, click, and keyboard recording.
 - Smooth recording of the mouse.
+- **Macro Library** with profiles, per-recording hotkeys, automatic profile switching by active window, and meta-binds (NEW).
+
+# Macro Library (Profiles, Hotkeys, Auto-switching & Meta-Binds)
+
+The **Library** menu opens a manager that turns PyMacroRecord from a single-macro
+tool into a full macro hub.
+
+**Recordings & playback.** Every saved macro lives in the library and can be
+played outright with the *Play* button (or by double-clicking it) — no need to
+load it into the main window first. Record a macro, open the library, and click
+*Save current recording* to add it to a profile.
+
+**Profiles.** Group recordings into profiles (e.g. *Photoshop*, *Excel*,
+*Gaming*). One profile is *active* at a time. The built-in **Global** profile is
+special: its recordings and hotkeys are always live, on top of whatever profile
+is active — so put your everyday macros there.
+
+**Automatic profile switching.** Give a profile one or more *window rules*
+(substrings matched against the focused window's title or process name, e.g.
+`photoshop`). Enable **Auto-switch profile by window** and PyMacroRecord watches
+the foreground window and activates the matching profile automatically, falling
+back to Global when nothing matches. Works on Windows, Linux (needs `xdotool` or
+`wmctrl`) and macOS.
+
+**Profile-specific hotkeys.** Each recording can be bound to its own key
+combination. The hotkey only triggers while its profile (or Global) is active,
+so the *same* keys can drive different macros in different apps.
+
+**Meta-Binds.** Hotkeys that perform an operation instead of replaying a macro.
+Available actions: switch to a profile, cycle profiles, play a recording by
+name, stop playback/record, panic (stop everything and release held keys),
+toggle auto-switch, lock the computer, and sleep the computer. Meta-binds are
+always active regardless of profile.
+
+All library data is stored alongside your settings in `library.json`.
 
 # How does this work?
 To start recording, you simply have to press the red button\

@@ -34,6 +34,12 @@
       "save_text": "Save",
       "save_as_text": "Save as"
     },
+    "library_menu": {
+      "library_text": "Library",
+      "open_text": "Open Macro Library",
+      "meta_binds_text": "Meta-Binds",
+      "auto_switch_text": "Auto-switch profile by window"
+    },
     "options_menu": {
       "options_text": "Options",
       "playback_menu": {

@@ -26,6 +26,9 @@ from pystray import Icon, MenuItem
 from hotkeys.hotkeys_manager import HotkeysManager
 from macro import Macro
 from utils.get_file import resource_path
+from utils.library import Library, GLOBAL_PROFILE
+from utils.meta_actions import MetaActionExecutor
+from utils.window_watcher import WindowWatcher
 from utils.record_file_management import RecordFileManagement
 from utils.user_settings import UserSettings
 from utils.version import Version
@@ -56,6 +59,9 @@ class MainApp(Window):
 
         self.load_language()
 
+        # Macro library (profiles, recordings, hotkeys, meta-binds)
+        self.library = Library(self)
+
         # For save message purpose
         self.macro_saved = False
         self.macro_recorded = False
@@ -66,10 +72,15 @@ class MainApp(Window):
 
         self.menu = MenuBar(self)  # Menu Bar
         self.macro = Macro(self)
+        self.meta_executor = MetaActionExecutor(self)
 
         self.validate_cmd = self.register(self.validate_input)
 
         self.hotkeyManager = HotkeysManager(self)
+
+        # Watch the focused window to drive automatic profile switching
+        self.window_watcher = WindowWatcher(self._on_window_changed)
+        self.window_watcher.start()
 
         self.status_text = Label(self, text='', relief=SUNKEN, anchor=W)
         if self.settings.settings_dict["Recordings"]["Show_Events_On_Status_Bar"]:
@@ -121,6 +132,24 @@ class MainApp(Window):
                     NewVerAvailable(self, self.version.new_version)
         self.mainloop()
 
+    def _on_window_changed(self, title, process):
+        """Auto profile-switch callback (runs on the watcher thread)."""
+        try:
+            if not self.library.get_auto_switch():
+                return
+            target = self.library.match_window(title, process) or GLOBAL_PROFILE
+            if target != self.library.get_active_profile():
+                self.library.set_active_profile(target)
+        except Exception:
+            pass
+
+    def refresh_auto_switch_var(self):
+        """Keep the menu checkbutton in sync when auto-switch is toggled elsewhere."""
+        try:
+            self.menu.auto_switch_var.set(self.library.get_auto_switch())
+        except Exception:
+            pass
+
     def load_language(self):
         self.lang = self.settings.settings_dict["Language"]
         with open(resource_path(path.join('langs', self.lang + '.json')), encoding='utf-8') as f:
@@ -158,6 +187,10 @@ class MainApp(Window):
                 RecordFileManagement(self, self.menu).save_macro()
             elif wantToSave is None:
                 return
+        try:
+            self.window_watcher.stop()
+        except Exception:
+            pass
         self.icon.stop()
         if platform.lower() == "linux":
             self.destroy()
