@@ -1,8 +1,13 @@
 from tkinter import messagebox
 
-from pynput import keyboard
+from pynput import keyboard, mouse
 
-from utils.get_key_pressed import getKeyPressed, normalize_key
+from utils.get_key_pressed import (
+    getKeyPressed,
+    normalize_key,
+    mouse_hotkey_token,
+    display_key,
+)
 from utils.keys import vk_nb
 
 
@@ -27,6 +32,10 @@ class HotkeysManager:
         self.index_to_change = 0
         self.keyboard_listener.start()
 
+        # Also listen for thumb / side mouse buttons so they can act as hotkeys.
+        self.mouse_listener = mouse.Listener(on_click=self.__on_mouse_click)
+        self.mouse_listener.start()
+
     def enable_hot_key_detection(self, type_of_hotkey, entry_to_change, index):
         self.hotkey_button = entry_to_change
         self.type_of_hotkey = type_of_hotkey
@@ -47,103 +56,140 @@ class HotkeysManager:
             else:
                 return True
 
-    def __on_press(self, key):
+    # ------------------------------------------------------------ capture ---
+    def __capture(self, token, display, finalizing):
+        """Add a pressed key/button to the hotkey being assigned (built-in
+        hotkeys settings window). When 'finalizing' (a non-modifier key or a
+        mouse button), validate and persist the combo."""
+        if token not in self.hotkeys:
+            self.hotkeys.append(token)
+            self.hotkey_visible.append(display)
+        self.hotkey_button.configure(text=self.hotkey_visible)
+        if not finalizing:
+            return
         userSettings = self.settings.settings_dict
+        if (
+            self.type_of_hotkey == "Record_Start"
+            and userSettings["Hotkeys"]["Playback_Start"] == self.hotkeys
+            or self.type_of_hotkey == "Playback_Start"
+            and userSettings["Hotkeys"]["Record_Start"] == self.hotkeys
+        ):
+            messagebox.showerror(
+                self.main_app.text_content["global"]["error"],
+                self.main_app.text_content["options_menu"]["settings_menu"]["hotkeys_settings"]["error_hotkeys"],
+            )
+            self.entry_to_change.configure(text=self.main_app.text_content["options_menu"]["settings_menu"]["hotkeys_settings"]["please_key_text"])
+            self.hotkeys = []
+            self.hotkey_visible = []
+            return
+        self.settings.change_settings("Hotkeys", self.type_of_hotkey, None, self.hotkeys)
+        self.changeKey = False
+        self.hotkeys = []
+        self.hotkey_visible = []
+
+    # --------------------------------------------------------- keyboard in ---
+    def __on_press(self, key):
         if self.changeKey:
             keyPressed = getKeyPressed(self.keyboard_listener, key)
             if keyPressed is None:
                 return
             keyPressed = normalize_key(keyPressed)
-            if keyPressed not in self.hotkeys:
-                if ">" in keyPressed:
-                    try:
-                        keyPressed = vk_nb[keyPressed]
-                    except KeyError:
-                        pass
-                self.hotkeys.append(keyPressed)
-                display = (
-                    keyPressed.replace("Key.", "")
-                    .replace("_l", "")
-                    .replace("_r", "")
-                    .replace("_gr", "")
-                )
-                self.hotkey_visible.append(display.upper())
-            self.hotkey_button.configure(text=self.hotkey_visible)
-
-            if all(keyword not in keyPressed for keyword in ["ctrl", "alt", "shift", "cmd"]):
-                if (
-                    self.type_of_hotkey == "Record_Start"
-                    and userSettings["Hotkeys"]["Playback_Start"] == self.hotkeys
-                    or self.type_of_hotkey == "Playback_Start"
-                    and userSettings["Hotkeys"]["Record_Start"] == self.hotkeys
-                ):
-                    messagebox.showerror(
-                        self.main_app.text_content["global"]["error"],
-                        self.main_app.text_content["options_menu"]["settings_menu"]["hotkeys_settings"]["error_hotkeys"],
-                    )
-                    self.entry_to_change.configure(text=self.main_app.text_content["options_menu"]["settings_menu"]["hotkeys_settings"]["please_key_text"])
-                    self.hotkeys = []
-                    self.hotkey_visible = []
-                    return
-                self.settings.change_settings(
-                    "Hotkeys", self.type_of_hotkey, None, self.hotkeys
-                )
-                self.changeKey = False
-                self.hotkeys = []
-                self.hotkey_visible = []
-
-        if not self.changeKey and not self.main_app.prevent_record:
-            keyPressed = getKeyPressed(self.keyboard_listener, key)
-            if keyPressed is None:
-                return
             if ">" in keyPressed:
                 try:
                     keyPressed = vk_nb[keyPressed]
                 except KeyError:
                     pass
+            finalizing = all(
+                kw not in keyPressed for kw in ["ctrl", "alt", "shift", "cmd"]
+            )
+            self.__capture(keyPressed, display_key(keyPressed), finalizing)
+            return
 
-            self.hotkey_detection.add(normalize_key(keyPressed))
+        if self.main_app.prevent_record:
+            return
 
-            hotkeys = userSettings["Hotkeys"]
+        keyPressed = getKeyPressed(self.keyboard_listener, key)
+        if keyPressed is None:
+            return
+        if ">" in keyPressed:
+            try:
+                keyPressed = vk_nb[keyPressed]
+            except KeyError:
+                pass
+        self.hotkey_detection.add(normalize_key(keyPressed))
+        self.__evaluate_triggers()
 
-            if (
-                "Record_Start" not in self._triggered_hotkeys
-                and self.__is_hotkey_triggered(hotkeys["Record_Start"], self.hotkey_detection)
-                and not self.macro.record
-                and not self.macro.playback
-            ):
-                self._triggered_hotkeys.add("Record_Start")
-                self.macro.start_record(True)
+    def __on_release(self, key):
+        key_released = getKeyPressed(self.keyboard_listener, key)
+        if key_released is not None:
+            self.hotkey_detection.discard(normalize_key(key_released))
+        self._triggered_hotkeys.clear()
 
-            elif (
-                "Record_Stop" not in self._triggered_hotkeys
-                and self.__is_hotkey_triggered(hotkeys["Record_Stop"], self.hotkey_detection)
-                and self.macro.record
-                and not self.macro.playback
-            ):
-                self._triggered_hotkeys.add("Record_Stop")
-                self.macro.stop_record()
+    # ------------------------------------------------------------ mouse in ---
+    def __on_mouse_click(self, x, y, button, pressed):
+        token = mouse_hotkey_token(button)
+        if token is None:
+            return  # only thumb / side buttons are hotkey-eligible
 
-            elif (
-                "Playback_Start" not in self._triggered_hotkeys
-                and self.__is_hotkey_triggered(hotkeys["Playback_Start"], self.hotkey_detection)
-                and not self.macro.record
-                and not self.macro.playback
-                and self.main_app.macro_recorded
-            ):
-                self._triggered_hotkeys.add("Playback_Start")
-                self.macro.start_playback()
+        if self.changeKey:
+            if pressed:
+                # a mouse button always finalizes the combo
+                self.__capture(token, display_key(token), True)
+            return
 
-            elif (
-                "Playback_Stop" not in self._triggered_hotkeys
-                and self.__is_hotkey_triggered(hotkeys["Playback_Stop"], self.hotkey_detection)
-                and not self.macro.record
-                and self.macro.playback
-            ):
-                self._triggered_hotkeys.add("Playback_Stop")
-                self.macro.stop_playback(True)
+        if self.main_app.prevent_record:
+            return
 
-            self.__check_dynamic_bindings()
+        if pressed:
+            self.hotkey_detection.add(token)
+            self.__evaluate_triggers()
+        else:
+            self.hotkey_detection.discard(token)
+            self._triggered_hotkeys.clear()
+
+    # ------------------------------------------------------- trigger logic ---
+    def __evaluate_triggers(self):
+        userSettings = self.settings.settings_dict
+        hotkeys = userSettings["Hotkeys"]
+
+        if (
+            "Record_Start" not in self._triggered_hotkeys
+            and self.__is_hotkey_triggered(hotkeys["Record_Start"], self.hotkey_detection)
+            and not self.macro.record
+            and not self.macro.playback
+        ):
+            self._triggered_hotkeys.add("Record_Start")
+            self.macro.start_record(True)
+
+        elif (
+            "Record_Stop" not in self._triggered_hotkeys
+            and self.__is_hotkey_triggered(hotkeys["Record_Stop"], self.hotkey_detection)
+            and self.macro.record
+            and not self.macro.playback
+        ):
+            self._triggered_hotkeys.add("Record_Stop")
+            self.macro.stop_record()
+
+        elif (
+            "Playback_Start" not in self._triggered_hotkeys
+            and self.__is_hotkey_triggered(hotkeys["Playback_Start"], self.hotkey_detection)
+            and not self.macro.record
+            and not self.macro.playback
+            and self.main_app.macro_recorded
+        ):
+            self._triggered_hotkeys.add("Playback_Start")
+            self.macro.start_playback()
+
+        elif (
+            "Playback_Stop" not in self._triggered_hotkeys
+            and self.__is_hotkey_triggered(hotkeys["Playback_Stop"], self.hotkey_detection)
+            and not self.macro.record
+            and self.macro.playback
+        ):
+            self._triggered_hotkeys.add("Playback_Stop")
+            self.macro.stop_playback(True)
+
+        self.__check_dynamic_bindings()
 
     def __check_dynamic_bindings(self):
         """Trigger meta-binds (always active) and active-profile + Global
@@ -155,7 +201,6 @@ class HotkeysManager:
             return
         detected = self.hotkey_detection
 
-        # Meta-binds -- always available.
         meta_exec = getattr(self.main_app, "meta_executor", None)
         if meta_exec is not None:
             for bid, mb in library.list_meta_binds().items():
@@ -166,7 +211,6 @@ class HotkeysManager:
                     self._triggered_hotkeys.add(token)
                     meta_exec.run(mb.get("action"), mb.get("arg"))
 
-        # Recording hotkeys -- only when idle (start playback of that macro).
         if self.macro.record or self.macro.playback:
             return
         for binding in library.active_hotkey_bindings():
@@ -178,12 +222,6 @@ class HotkeysManager:
                 rec = {"events": binding["events"], "settings": binding.get("settings")}
                 self.macro.play_library_recording(rec)
                 break
-
-    def __on_release(self, key):
-        key_released = getKeyPressed(self.keyboard_listener, key)
-        if key_released is not None:
-            self.hotkey_detection.discard(normalize_key(key_released))
-        self._triggered_hotkeys.clear()
 
     def __is_hotkey_triggered(self, hotkey_config, detected_keys):
         if not hotkey_config or not isinstance(hotkey_config, list):

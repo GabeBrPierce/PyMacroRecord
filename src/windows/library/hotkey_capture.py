@@ -3,9 +3,9 @@ returns it as a list of pynput key strings (e.g. ['Key.ctrl_l', 'f5'])."""
 
 from tkinter import BOTTOM, LEFT, Button, Frame, Label, Toplevel
 
-from pynput import keyboard
+from pynput import keyboard, mouse
 
-from utils.get_key_pressed import getKeyPressed
+from utils.get_key_pressed import getKeyPressed, mouse_hotkey_token, display_keys
 
 
 class HotkeyCapture(Toplevel):
@@ -33,6 +33,8 @@ class HotkeyCapture(Toplevel):
 
         self._listener = keyboard.Listener(on_press=self._on_press)
         self._listener.start()
+        self._mouse_listener = mouse.Listener(on_click=self._on_mouse)
+        self._mouse_listener.start()
 
         self.protocol("WM_DELETE_WINDOW", self._cancel)
         self.geometry("+%d+%d" % (parent.winfo_rootx() + 60, parent.winfo_rooty() + 60))
@@ -42,11 +44,7 @@ class HotkeyCapture(Toplevel):
     def _format(self):
         if not self._keys:
             return "(none)"
-        disp = [
-            k.replace("Key.", "").replace("_l", "").replace("_r", "").replace("_gr", "").upper()
-            for k in self._keys
-        ]
-        return " + ".join(disp)
+        return display_keys(self._keys)
 
     def _add(self, key_str):
         if key_str not in self._keys:
@@ -66,6 +64,17 @@ class HotkeyCapture(Toplevel):
         except Exception:
             pass
 
+    def _on_mouse(self, x, y, button, pressed):
+        if not pressed:
+            return
+        token = mouse_hotkey_token(button)
+        if token is None:
+            return  # ignore left/right/middle for hotkeys
+        try:
+            self.after(0, lambda: self._add(token))
+        except Exception:
+            pass
+
     def _clear(self):
         self._keys = []
         self.key_label.configure(text=self._format())
@@ -73,6 +82,10 @@ class HotkeyCapture(Toplevel):
     def _finish(self):
         try:
             self._listener.stop()
+        except Exception:
+            pass
+        try:
+            self._mouse_listener.stop()
         except Exception:
             pass
         self.main_app.prevent_record = self._prev_prevent

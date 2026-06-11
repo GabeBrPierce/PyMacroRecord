@@ -39,3 +39,34 @@ def getKeyPressed(keyboardListener, key):
             if keyPressed == "'^'":
                 keyPressed = "^"
     return keyPressed
+
+
+# Mouse side/thumb buttons usable as hotkeys. pynput button .name -> token.
+MOUSE_HOTKEY_BUTTONS = {
+    "x1": "Mouse.x1", "x2": "Mouse.x2",
+    "button8": "Mouse.x1", "button9": "Mouse.x2",
+}
+
+
+def mouse_hotkey_token(button):
+    """Return a hotkey token for a thumb/side mouse button, or None."""
+    return MOUSE_HOTKEY_BUTTONS.get(getattr(button, "name", ""))
+
+
+def display_key(token):
+    """Human-friendly label for a stored hotkey token (keyboard or mouse)."""
+    if token is None:
+        return ""
+    if token.startswith("Mouse."):
+        return "Mouse " + token.split(".", 1)[1].upper()
+    return (
+        token.replace("Key.", "")
+        .replace("_l", "")
+        .replace("_r", "")
+        .replace("_gr", "")
+        .upper()
+    )
+
+
+def display_keys(tokens):
+    return " + ".join(display_key(t) for t in (tokens or []))

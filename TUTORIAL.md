@@ -160,6 +160,10 @@ On Linux this needs `xdotool` (preferred) or `wmctrl` installed.
 ## Per-recording hotkeys
 Select a recording, click **Set hotkey**, press your combination, and click OK.
 The hotkey plays that recording whenever its profile (or Global) is active.
+Your mouse **thumb / side buttons** count as hotkeys too: press one during
+capture to bind it, alone or combined with keyboard keys (e.g. Ctrl + Mouse X1).
+This applies to recording hotkeys, meta-binds, and the built-in record/playback
+controls.
 
 ## Meta-binds
 Click **Meta-binds...** (Library window or Library menu). **Add** a bind, choose

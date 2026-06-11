@@ -2,6 +2,7 @@ import copy
 from tkinter import BOTTOM, LEFT, Button, Frame, Label
 
 from utils.keys import vk_nb
+from utils.get_key_pressed import display_key
 from windows.popup import Popup
 
 
@@ -20,10 +21,10 @@ class Hotkeys(Popup):
 
         for i in range(len(hotkeyVisible)):
             for j in range(len(hotkeyVisible[i])):
-                key = hotkeyVisible[i][j].replace("Key.", "").replace("_l", "").replace("_r", "").replace("_gr", "")
-                if "<" and ">" in key:
-                    key = vk_nb[key]
-                hotkeyVisible[i][j] = key.upper()
+                key = hotkeyVisible[i][j]
+                if not key.startswith("Mouse.") and "<" in key and ">" in key:
+                    key = vk_nb.get(key, key)
+                hotkeyVisible[i][j] = display_key(key)
 
         Button(hotkeyLine, text=main_app.text_content["options_menu"]["settings_menu"]["hotkeys_settings"]["clear_text"],
                command=lambda: hotkeyManager.clear_hot_key("Record_Start", self.startKey)).grid(row=0, column=2, padx=10)

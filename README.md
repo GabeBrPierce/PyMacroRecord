@@ -57,6 +57,10 @@ back to Global when nothing matches. Works on Windows, Linux (needs `xdotool` or
 combination. The hotkey only triggers while its profile (or Global) is active,
 so the *same* keys can drive different macros in different apps.
 
+Hotkeys (recordings, meta-binds, and the built-in record/playback controls) can
+use mouse **thumb / side buttons** (X1/X2) on their own or combined with keyboard
+keys.
+
 **Meta-Binds.** Hotkeys that perform an operation instead of replaying a macro.
 Available actions: switch to a profile, cycle profiles, play a recording by
 name, stop playback/record, panic (stop everything and release held keys),

@@ -6,16 +6,12 @@ from tkinter import messagebox
 from tkinter.ttk import Button, Combobox, Frame, Label, Treeview
 
 from utils.library import META_ACTIONS, GLOBAL_PROFILE
+from utils.get_key_pressed import display_keys
 from windows.library.hotkey_capture import capture_hotkey
 
 
 def _fmt_keys(keys):
-    if not keys:
-        return "(unbound)"
-    return " + ".join(
-        k.replace("Key.", "").replace("_l", "").replace("_r", "").replace("_gr", "").upper()
-        for k in keys
-    )
+    return display_keys(keys) or "(unbound)"
 
 
 class MetaBindsWindow(Toplevel):

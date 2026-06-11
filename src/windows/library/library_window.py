@@ -11,18 +11,14 @@ from tkinter import messagebox, simpledialog
 from tkinter.ttk import Button, Checkbutton, Frame, Label, Treeview
 
 from utils.library import GLOBAL_PROFILE
+from utils.get_key_pressed import display_keys
 from utils.window_watcher import get_active_window, platform_supported
 from windows.library.hotkey_capture import capture_hotkey
 from windows.library.meta_binds_window import MetaBindsWindow
 
 
 def _fmt_keys(keys):
-    if not keys:
-        return ""
-    return " + ".join(
-        k.replace("Key.", "").replace("_l", "").replace("_r", "").replace("_gr", "").upper()
-        for k in keys
-    )
+    return display_keys(keys)
 
 
 class LibraryWindow(Toplevel):
